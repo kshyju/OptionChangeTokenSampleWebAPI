@@ -8,22 +8,15 @@ namespace WebApplication9
     [ApiController]
     public class ValuesController : ControllerBase
     {
-        private CustomOptionsChangeTokenSource _changeTokenSource;
+        private readonly CustomOptionsChangeTokenSource _changeTokenSource;
         private readonly ILogger<ValuesController> logger;
-        private IOptionsMonitor<MyAppSettings> _optionsMonitor;
+        private readonly IOptionsMonitor<MyAppSettings> _optionsMonitor;
         public ValuesController(ILogger<ValuesController> logger, IOptionsMonitor<MyAppSettings> optionsMonitor, CustomOptionsChangeTokenSource changeTokenSource)
         {
             this.logger = logger;
             _optionsMonitor = optionsMonitor;
             _changeTokenSource = changeTokenSource;
-
-            // Add a change listener to verify that changes are detected
-            _optionsMonitor.OnChange(options =>
-            {
-                Console.WriteLine("Options changed: " + options.PopulatedTime);
-            });
         }
-
 
         [HttpGet("{id}")]
         public string Get(int id)
@@ -42,22 +35,22 @@ namespace WebApplication9
         }
     }
 
-    public class CustomOptionsChangeTokenSource : IOptionsChangeTokenSource<MyAppSettings>
+    public sealed class CustomOptionsChangeTokenSource : IOptionsChangeTokenSource<MyAppSettings>, IDisposable
     {
-        private CancellationTokenSource _cts = new CancellationTokenSource();
-        public string Name => "Foo";
-        public IChangeToken GetChangeToken()
-        {
-            var currentCts = _cts;
-            return new CancellationChangeToken(currentCts.Token);
-        }
+        private CancellationTokenSource _cts = new();
+
+        public string Name => Options.DefaultName;
+
+        public IChangeToken GetChangeToken() => new CancellationChangeToken(_cts.Token);
 
         public void TriggerChange()
         {
-            var newCts = new CancellationTokenSource();
-            var previousCts = Interlocked.Exchange(ref _cts, newCts);
+            var previousCts = Interlocked.Exchange(ref _cts, new CancellationTokenSource());
             previousCts.Cancel();
+            previousCts.Dispose();
         }
+
+        public void Dispose() => _cts.Dispose();
     }
 
     public class ConfigureOptionsMyAppSettings : IConfigureOptions<MyAppSettings>
@@ -65,7 +58,7 @@ namespace WebApplication9
         public void Configure(MyAppSettings options)
         {
             options.PopulatedTime = DateTime.UtcNow;
-            Console.WriteLine("Options configured at: " + options.PopulatedTime); 
+            Console.WriteLine("Options configured at: " + options.PopulatedTime);
         }
     }
     public sealed class MyAppSettings

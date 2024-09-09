@@ -8,10 +8,9 @@ namespace WebApplication9
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
-            builder.Services.AddSingleton<CustomOptionsChangeTokenSource>(); 
+            builder.Services.AddSingleton<CustomOptionsChangeTokenSource>();
             builder.Services.AddSingleton<IConfigureOptions<MyAppSettings>, ConfigureOptionsMyAppSettings>();
-            builder.Services.AddSingleton<IOptionsChangeTokenSource<MyAppSettings>, CustomOptionsChangeTokenSource>();
+            builder.Services.AddSingleton<IOptionsChangeTokenSource<MyAppSettings>>(sp => sp.GetRequiredService<CustomOptionsChangeTokenSource>());
 
             builder.Services.AddControllers();
             var app = builder.Build();

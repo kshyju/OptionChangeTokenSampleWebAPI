@@ -22,7 +22,7 @@ namespace OptionChangeTokenDemo
             {
                 var thatEnvVar = _configuration["SCRIPT_ROOT"];
 
-                var data = _optionsMonitor.CurrentValue.Name;
+                var data = $"{_optionsMonitor.CurrentValue.Name}:{_optionsMonitor.CurrentValue.City}";
                 _logger.LogWarning(".... {time} --- NAME: {name} . SCRIPT_ROOT:{env} ", DateTimeOffset.Now, data, thatEnvVar);
                 await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken);
             }

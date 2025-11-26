@@ -9,18 +9,17 @@ namespace WebApplication9
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            Environment.SetEnvironmentVariable("SCRIPT_ROOT", "D:\\temp\\config_test");
+            Environment.SetEnvironmentVariable("SCRIPT_ROOT", "D:\\temp\\config_test3");
             // Add custom JSON config source (if file exists, it will load into IConfiguration)
             ((IConfigurationBuilder)builder.Configuration).Add(new CustomJsonConfigurationSource());
 
-            // Add environment variables to IConfiguration
             builder.Configuration.AddEnvironmentVariables();
 
-            // Bind to MyConfig POCO Options.
-            builder.Services.Configure<MyConfig>(builder.Configuration);
+            builder.Services.AddSingleton<IConfigureOptions<MyConfig>, ConfigureMyConfig>();
 
-            // set minimum logging level to Information
-            builder.Logging.SetMinimumLevel(LogLevel.Information);
+            // Ensure options monitor rebinds when IConfiguration changes
+            builder.Services.AddSingleton<IOptionsChangeTokenSource<MyConfig>>(sp =>
+                new ConfigurationChangeTokenSource<MyConfig>(sp.GetRequiredService<IConfiguration>()));
 
             builder.Services.AddControllers();
             builder.Services.AddHostedService<MyBackgroundService>();

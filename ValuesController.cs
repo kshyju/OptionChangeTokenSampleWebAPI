@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
-using Microsoft.Extensions.Primitives;
+using Microsoft.Extensions.Configuration;
 
 namespace WebApplication9
 {
@@ -8,61 +7,28 @@ namespace WebApplication9
     [ApiController]
     public class ValuesController : ControllerBase
     {
-        private readonly CustomOptionsChangeTokenSource _changeTokenSource;
         private readonly ILogger<ValuesController> logger;
-        private readonly IOptionsMonitor<MyAppSettings> _optionsMonitor;
-        public ValuesController(ILogger<ValuesController> logger, IOptionsMonitor<MyAppSettings> optionsMonitor, CustomOptionsChangeTokenSource changeTokenSource)
+        private readonly IConfiguration configuration;
+        public ValuesController(ILogger<ValuesController> logger, IConfiguration configuration)
         {
             this.logger = logger;
-            _optionsMonitor = optionsMonitor;
-            _changeTokenSource = changeTokenSource;
+            this.configuration = configuration;
         }
 
         [HttpGet("{id}")]
         public string Get(int id)
         {
-            var options = _optionsMonitor.CurrentValue;
-
             logger.LogInformation("Get value {id}", id);
             if (id == 10)
             {
-                // Refresh the MyAppSettings options.
-                _changeTokenSource.TriggerChange();
-                options = _optionsMonitor.CurrentValue;
+                Environment.SetEnvironmentVariable("SCRIPT_ROOT", "D:\\temp\\config_test2");
+                //// Reload only the custom JSON configuration provider
+                CustomJsonConfigurationProvider.TriggerReload();
+                logger.LogInformation("Custom JSON configuration provider reloaded after SCRIPT_ROOT change.");
+
             }
 
-            return "value " + id + " PopulatedTime:" + options.PopulatedTime;
+            return "value " + id;
         }
-    }
-
-    public sealed class CustomOptionsChangeTokenSource : IOptionsChangeTokenSource<MyAppSettings>, IDisposable
-    {
-        private CancellationTokenSource _cts = new();
-
-        public string Name => Options.DefaultName;
-
-        public IChangeToken GetChangeToken() => new CancellationChangeToken(_cts.Token);
-
-        public void TriggerChange()
-        {
-            var previousCts = Interlocked.Exchange(ref _cts, new CancellationTokenSource());
-            previousCts.Cancel();
-            previousCts.Dispose();
-        }
-
-        public void Dispose() => _cts.Dispose();
-    }
-
-    public class ConfigureOptionsMyAppSettings : IConfigureOptions<MyAppSettings>
-    {
-        public void Configure(MyAppSettings options)
-        {
-            options.PopulatedTime = DateTime.UtcNow;
-            Console.WriteLine("Options configured at: " + options.PopulatedTime);
-        }
-    }
-    public sealed class MyAppSettings
-    {
-        public DateTime PopulatedTime { get; set; }
     }
 }
